@@ -1,3 +1,6 @@
+//1. Prima problema:
+
+
 #include <fstream>
 using namespace std;
 ifstream fin("input.txt");
