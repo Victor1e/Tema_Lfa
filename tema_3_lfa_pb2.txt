@@ -1,0 +1,109 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+using namespace std;
+
+// Structură pentru a reprezenta tranzițiile
+struct TranzitiePDA {
+    int stareUrmatoare;    // Starea următoare după tranziție
+    char simbolIntrare;    // Simbolul de intrare necesar pentru tranziție
+    string popStiva;       // Șirul de scos din stivă
+    string pushStiva;      // Șirul de pus în stivă
+};
+
+// Variabile globale pentru configurația PDA
+int numarStari, numarTranzitii, stareInitiala, numarStariFinale;
+int stariFinale[1000]; // Array pentru a stoca stările finale
+vector<TranzitiePDA> tranzitiiPDA[1000]; // Vector de tranziții pentru fiecare stare
+string sirIntrare; // Șirul de intrare ce trebuie verificat
+vector<char> stivaPDA; // Stiva folosită de PDA
+
+// Funcție recursivă pentru a verifica dacă șirul de intrare este acceptat de PDA
+bool esteAcceptat(int pozitie, int stareCurenta) {
+    // Dacă am ajuns la sfârșitul șirului de intrare
+    if (pozitie == sirIntrare.size()) {
+        // Verificăm dacă stiva conține doar simbolul de bază 'Z'
+        if (stivaPDA.size() == 1 && stivaPDA[0] == 'Z') {
+            // Verificăm dacă starea curentă este una dintre stările finale
+            for (const auto& tranzitie : tranzitiiPDA[stareCurenta]) {
+                if (tranzitie.simbolIntrare == '0' && tranzitie.pushStiva[0] == 'Z' && tranzitie.popStiva[0] == '0') {
+                    return true; // Șirul este acceptat
+                }
+            }
+        }
+        return false; // Șirul nu este acceptat
+    }
+
+    // Parcurgem toate tranzițiile posibile din starea curentă
+    for (const auto& tranzitie : tranzitiiPDA[stareCurenta]) {
+        // Verificăm dacă simbolul de intrare și vârful stivei se potrivesc cu tranziția
+        if (sirIntrare[pozitie] == tranzitie.simbolIntrare && tranzitie.pushStiva[0] == stivaPDA.back()) {
+            // Scoatem din stivă conform tranziției
+            stivaPDA.pop_back();
+            // Punem în stivă conform tranziției, în ordine inversă
+            for (auto it = tranzitie.popStiva.rbegin(); it != tranzitie.popStiva.rend(); ++it) {
+                if (*it != '0') {
+                    stivaPDA.push_back(*it);
+                }
+            }
+            // Apelăm recursiv funcția pentru următoarea poziție și starea următoare
+            if (esteAcceptat(pozitie + 1, tranzitie.stareUrmatoare)) {
+                return true; // Șirul este acceptat
+            }
+            // Restaurăm stiva dacă această cale nu duce la acceptare
+            for (auto it = tranzitie.popStiva.begin(); it != tranzitie.popStiva.end(); ++it) {
+                if (*it != '0') {
+                    stivaPDA.pop_back();
+                }
+            }
+            stivaPDA.push_back(tranzitie.pushStiva[0]);
+        }
+    }
+    return false; // Nu am găsit nicio cale de acceptare
+}
+
+int main() {
+    ifstream fisierIntrare("date.in");
+
+    // Verificăm dacă fișierul de intrare poate fi deschis
+    if (!fisierIntrare) {
+        cerr << "Nu se poate deschide fișierul de intrare." << endl;
+        return 1;
+    }
+
+    // Citim numărul de stări, tranziții și starea inițială din fișier
+    fisierIntrare >> numarStari >> numarTranzitii;
+    fisierIntrare >> stareInitiala;
+
+    int deLaStare, laStare;
+    char simbolIntrare;
+    string popStiva, pushStiva;
+
+    // Citim tranzițiile din fișier
+    for (int i = 0; i < numarTranzitii; ++i) {
+        fisierIntrare >> deLaStare >> laStare >> simbolIntrare >> popStiva >> pushStiva;
+        tranzitiiPDA[deLaStare].push_back({laStare, simbolIntrare, pushStiva, popStiva});
+    }
+
+    // Citim numărul de stări finale și stările finale
+    fisierIntrare >> numarStariFinale;
+    for (int i = 0; i < numarStariFinale; ++i) {
+        fisierIntrare >> stariFinale[i];
+    }
+
+    // Citim șirul de intrare de la tastatură
+    cout << "Introduceți sirul de intrare: ";
+    cin >> sirIntrare;
+    // Inițializăm stiva cu simbolul de bază 'Z'
+    stivaPDA.push_back('Z');
+
+    // Verificăm dacă șirul de intrare este acceptat de PDA
+    if (esteAcceptat(0, stareInitiala)) {
+        cout << "Sirul este acceptat de PDA." << endl;
+    } else {
+        cout << "Sirul este respins de PDA." << endl;
+    }
+
+    return 0;
+}
